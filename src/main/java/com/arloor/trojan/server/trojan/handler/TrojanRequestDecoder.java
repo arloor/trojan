@@ -76,7 +76,7 @@ public class TrojanRequestDecoder extends ByteToMessageDecoder {
                     in.skipBytes(2);
                     state = CMD.CONNECT.equals(cmd) ? State.TCP : State.PASRSE_UDP_DST_LENGTH;
                     if (state == State.PASRSE_UDP_DST_LENGTH) {
-                        ctx.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
+                        ctx.pipeline().addLast(new TrojanUdpConnectHandler());
                     } else {
                         ctx.pipeline().addLast(new TrojanConnectHandler());
                     }
@@ -101,8 +101,7 @@ public class TrojanRequestDecoder extends ByteToMessageDecoder {
                 if (in.readableBytes() == udpPacketLength) {
 //                    in.retain();
                     ByteBuf content = in.readBytes(udpPacketLength);
-                    out.add(new TrojanRequest(passwd, this.dst, Proto.UDP, Unpooled.EMPTY_BUFFER));
-                    out.add(content);
+                    out.add(new TrojanRequest(passwd, this.dst, Proto.UDP, content));
                     state = State.PASRSE_UDP_DST_LENGTH;
                 }
                 break;
