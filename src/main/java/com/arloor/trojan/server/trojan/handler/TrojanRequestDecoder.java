@@ -60,11 +60,11 @@ public class TrojanRequestDecoder extends ByteToMessageDecoder {
                 break;
             case DST_ADDR_PORT:
                 dst = parseDst(in);
-                if (dst == null) {
-                    SocksServerUtils.closeOnFlush(ctx.channel());
+                if (dst != null) {
+                    state = State.CRLF;
+                } else {
                     break;
                 }
-                state = State.CRLF;
             case CRLF:
                 if (in.readableBytes() > 2) {
                     in.skipBytes(2);
@@ -77,10 +77,10 @@ public class TrojanRequestDecoder extends ByteToMessageDecoder {
                 ByteBuf payload = in.readSlice(in.readableBytes());
                 switch (state) {
                     case TCP:
-                        out.add(new TrojanRequest(passwd, dst, Proto.TCP,payload));
+                        out.add(new TrojanRequest(passwd, dst, Proto.TCP, payload));
                         break;
                     case UDP:
-                        out.add(new TrojanRequest(passwd, dst, Proto.UDP,payload));
+                        out.add(new TrojanRequest(passwd, dst, Proto.UDP, payload));
                         break;
                 }
 
