@@ -31,6 +31,6 @@ public class TrojanServerInitializer extends ChannelInitializer<SocketChannel> {
 
         p.addLast(new TrojanRequestDecoder());
 //        p.addLast(new LoggingHandler(LogLevel.INFO));
-        p.addLast(new TrojanConnectHandler());
+//        p.addLast(new TrojanConnectHandler());
     }
 }

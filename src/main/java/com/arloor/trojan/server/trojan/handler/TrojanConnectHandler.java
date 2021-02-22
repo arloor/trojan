@@ -32,11 +32,11 @@ public class TrojanConnectHandler extends SimpleChannelInboundHandler<TrojanRequ
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, TrojanRequest msg) {
         request = (TrojanRequest) msg;
-        log.info("{}",request);
+        log.info("{}", request);
         host = request.getDst().getHost();
         port = request.getDst().getPort();
-        if(!Main.passwd.equals(request.getPasswd())){
-            log.error("密码不对:{}",request.getPasswd());
+        if (!Main.passwd.equals(request.getPasswd())) {
+            log.error("密码不对:{}", request.getPasswd());
             SocksServerUtils.closeOnFlush(ctx.channel());
             return;
         }
@@ -44,14 +44,18 @@ public class TrojanConnectHandler extends SimpleChannelInboundHandler<TrojanRequ
         promise.addListener(
                 new FutureListener<Channel>() {
                     @Override
-                    public void operationComplete(final Future<Channel> future) throws Exception {
+                    public void operationComplete(final Future<Channel> future) {
                         final Channel outboundChannel = future.getNow();
                         if (future.isSuccess()) {
-                            ctx.pipeline().remove(TrojanConnectHandler.class);
-                            outboundChannel.pipeline().addLast(new RelayHandler(ctx.channel()));
-                            RelayHandler relayHandler = new RelayHandler(outboundChannel);
-                            ctx.pipeline().addLast(relayHandler);
-                            relayHandler.channelRead(ctx, msg.getPayload());
+                            try {
+                                ctx.pipeline().remove(TrojanConnectHandler.class);
+                                outboundChannel.pipeline().addLast(new RelayHandler(ctx.channel()));
+                                RelayHandler relayHandler = new RelayHandler(outboundChannel);
+                                ctx.pipeline().addLast(relayHandler);
+                                relayHandler.channelRead(ctx, msg.getPayload());
+                            } catch (Exception e) {
+                                log.error("post established error: {}", e.getMessage());
+                            }
                         } else {
                             log.info("reply tunnel established Failed: ");
                             SocksServerUtils.closeOnFlush(ctx.channel());
