@@ -84,8 +84,8 @@ public class TrojanRequestDecoder extends ByteToMessageDecoder {
                 }
                 break;
             case TCP:
-                in.retain();
-                ByteBuf payload = in.readSlice(in.readableBytes());
+//                in.retain();
+                ByteBuf payload = in.readBytes(in.readableBytes());
                 out.add(new TrojanRequest(passwd, dst, Proto.TCP, payload));
                 break;
             case PASRSE_UDP_DST_LENGTH:
@@ -99,8 +99,8 @@ public class TrojanRequestDecoder extends ByteToMessageDecoder {
                 }
             case UDP_CONTENT:
                 if (in.readableBytes() == udpPacketLength) {
-                    in.retain();
-                    ByteBuf content = in.readSlice(udpPacketLength);
+//                    in.retain();
+                    ByteBuf content = in.readBytes(udpPacketLength);
                     out.add(new TrojanRequest(passwd, this.dst, Proto.UDP, Unpooled.EMPTY_BUFFER));
                     out.add(content);
                     state = State.PASRSE_UDP_DST_LENGTH;
