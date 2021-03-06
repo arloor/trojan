@@ -4,6 +4,7 @@ import com.arloor.trojan.server.Main;
 import com.arloor.trojan.server.trojan.enums.ATYP;
 import com.arloor.trojan.server.trojan.model.DstWithLength;
 import com.arloor.trojan.server.trojan.model.TrojanRequest;
+import com.arloor.trojan.server.util.OsHelper;
 import com.arloor.trojan.server.util.RemoteActiveHandler;
 import com.arloor.trojan.server.util.SocksServerUtils;
 import io.netty.bootstrap.Bootstrap;
@@ -11,6 +12,7 @@ import io.netty.channel.*;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.kqueue.KQueueDatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -71,7 +73,7 @@ public class TrojanUdpConnectHandler extends SimpleChannelInboundHandler<TrojanR
         final Bootstrap b = new Bootstrap();
         final Channel inboundChannel = ctx.channel();
         b.group(inboundChannel.eventLoop())
-                .channel(KQueueDatagramChannel.class)
+                .channel(OsHelper.isMac()?KQueueDatagramChannel.class:OsHelper.isUnix()?EpollDatagramChannel.class: NioDatagramChannel.class)
                 .handler(new RemoteActiveHandler(promise));
         b.bind(0).addListener(future -> {
             if (future.isSuccess()) {

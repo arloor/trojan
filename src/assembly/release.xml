@@ -15,7 +15,7 @@
             <scope>runtime</scope>
             <unpackOptions>
                 <excludes>
-                    <exclude>**/log4j2-test.xml</exclude>
+                    <exclude>**/log4j2-testa.xml</exclude>
                 </excludes>
             </unpackOptions>
         </dependencySet>

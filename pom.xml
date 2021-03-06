@@ -112,9 +112,6 @@
                             <mainClass>${mainClass}</mainClass>
                         </manifest>
                     </archive>
-                    <excludes>
-                        log4j2-test.xml
-                    </excludes>
                 </configuration>
             </plugin>
             <plugin>
