@@ -158,9 +158,12 @@ public class TrojanRequestDecoder extends ByteToMessageDecoder {
             }
         }
         if (dst != null) {
+            if (dst.getPort() < 0 || dst.getPort() > 65535) {
+                logger.info("错误的udp地址：{} {}", dst, udpAtyp);
+            }
             short contentLength = in.readShort();
             in.skipBytes(2);
-            return new DstWithLength(dst.getHost(), dst.getPort(), contentLength);
+            return new DstWithLength(dst.getHost(), dst.getPort(), contentLength, udpAtyp);
         }
         return null;
     }

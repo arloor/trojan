@@ -14,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TrojanConnectHandler extends SimpleChannelInboundHandler<TrojanRequest> {
     private static final Logger log = LoggerFactory.getLogger(TrojanConnectHandler.class);
@@ -23,6 +25,8 @@ public class TrojanConnectHandler extends SimpleChannelInboundHandler<TrojanRequ
     private String host;
     private int port;
     private TrojanRequest request;
+    private int count = 0;
+    List<TrojanRequest> requests = new ArrayList<>();
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -31,8 +35,10 @@ public class TrojanConnectHandler extends SimpleChannelInboundHandler<TrojanRequ
 
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, TrojanRequest msg) {
+        count++;
+        requests.add(msg);
         request = (TrojanRequest) msg;
-        log.info("{}", request);
+//        log.info("{}", request);
         host = request.getDst().getHost();
         port = request.getDst().getPort();
         if (!Main.passwd.equals(request.getPasswd())) {
@@ -52,9 +58,11 @@ public class TrojanConnectHandler extends SimpleChannelInboundHandler<TrojanRequ
                                 outboundChannel.pipeline().addLast(new RelayHandler(ctx.channel()));
                                 RelayHandler relayHandler = new RelayHandler(outboundChannel);
                                 ctx.pipeline().addLast(relayHandler);
-                                relayHandler.channelRead(ctx, msg.getPayload());
+                                for (TrojanRequest trojanRequest : requests) {
+                                    relayHandler.channelRead(ctx, trojanRequest.getPayload());
+                                }
                             } catch (Exception e) {
-                                log.error("post established error: {}", e.getMessage());
+                                log.error("post established error: ", e);
                             }
                         } else {
                             log.info("reply tunnel established Failed: ");
@@ -66,22 +74,24 @@ public class TrojanConnectHandler extends SimpleChannelInboundHandler<TrojanRequ
 
         // 4.连接目标网站
         final Channel inboundChannel = ctx.channel();
-        b.group(inboundChannel.eventLoop())
-                .channel(OsHelper.socketChannelClazz())
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
-                .option(ChannelOption.SO_KEEPALIVE, true)
-                .handler(new RemoteActiveHandler(promise));
-
-        b.connect(host, port).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    // Connection established use handler provided results
-                } else {
-                    SocksServerUtils.closeOnFlush(ctx.channel());
+        if (count == 1) {
+            b.group(inboundChannel.eventLoop())
+                    .channel(OsHelper.socketChannelClazz())
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+                    .option(ChannelOption.SO_KEEPALIVE, true)
+                    .handler(new RemoteActiveHandler(promise));
+            b.connect(host, port).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        // Connection established use handler provided results
+                    } else {
+                        SocksServerUtils.closeOnFlush(ctx.channel());
+                    }
                 }
-            }
-        });
+            });
+        }
+
     }
 
     @Override

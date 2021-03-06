@@ -21,4 +21,8 @@ public enum ATYP {
     public static ATYP parse(byte value) {
         return lookup.get(value);
     }
+
+    public byte getValue() {
+        return value;
+    }
 }

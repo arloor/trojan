@@ -1,12 +1,15 @@
 package com.arloor.trojan.server.trojan.handler;
 
 import com.arloor.trojan.server.Main;
+import com.arloor.trojan.server.trojan.enums.ATYP;
+import com.arloor.trojan.server.trojan.model.DstWithLength;
 import com.arloor.trojan.server.trojan.model.TrojanRequest;
 import com.arloor.trojan.server.util.RemoteActiveHandler;
 import com.arloor.trojan.server.util.SocksServerUtils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.kqueue.KQueueDatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
 import io.netty.handler.logging.LogLevel;
@@ -20,7 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.net.InetSocketAddress;
 
 public class TrojanUdpConnectHandler extends SimpleChannelInboundHandler<TrojanRequest> {
-    private static final Logger log = LoggerFactory.getLogger(TrojanConnectHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(TrojanUdpConnectHandler.class);
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -32,6 +35,7 @@ public class TrojanUdpConnectHandler extends SimpleChannelInboundHandler<TrojanR
         log.info("{}", request);
         String host = request.getDst().getHost();
         int port = request.getDst().getPort();
+        ATYP udpAtype = ((DstWithLength) request.getDst()).getUdpAtype();
         if (!Main.passwd.equals(request.getPasswd())) {
             log.error("密码不对:{}", request.getPasswd());
             SocksServerUtils.closeOnFlush(ctx.channel());
@@ -47,15 +51,15 @@ public class TrojanUdpConnectHandler extends SimpleChannelInboundHandler<TrojanR
                             log.info("promise connect success");
                             try {
                                 ctx.pipeline().remove(TrojanUdpConnectHandler.class);
-                                outboundChannel.pipeline().addLast(new DatagramDnsResponseDecoder());
+//                                outboundChannel.pipeline().addLast(new DatagramDnsResponseDecoder());
                                 outboundChannel.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                                 // 这里要改
-//                                outboundChannel.pipeline().addLast(new RelayHandler(ctx.channel()));
-                                UdpRelayHandler relayHandler = new UdpRelayHandler(outboundChannel, host, port);
+                                outboundChannel.pipeline().addLast(new UdpRelayHandler(ctx.channel(), host, port, udpAtype));
+                                UdpRelayHandler relayHandler = new UdpRelayHandler(outboundChannel, host, port, udpAtype);
                                 ctx.pipeline().addLast(relayHandler);
-                                relayHandler.channelRead(ctx, request.getPayload());
+                                relayHandler.channelRead(ctx, request);
                             } catch (Exception e) {
-                                log.error("post established error: {}", e.getMessage());
+                                log.error("post established error", e);
                             }
                         } else {
                             log.info("reply tunnel established Failed: ");
@@ -67,11 +71,13 @@ public class TrojanUdpConnectHandler extends SimpleChannelInboundHandler<TrojanR
         final Bootstrap b = new Bootstrap();
         final Channel inboundChannel = ctx.channel();
         b.group(inboundChannel.eventLoop())
-                .channel(EpollDatagramChannel.class)
+                .channel(KQueueDatagramChannel.class)
                 .handler(new RemoteActiveHandler(promise));
         b.bind(0).addListener(future -> {
             if (future.isSuccess()) {
-                log.info("connect success");
+//                log.info("connect success");
+            } else {
+                log.error("connect error", future.cause());
             }
         });
     }
